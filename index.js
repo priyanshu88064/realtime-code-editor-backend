@@ -7,46 +7,27 @@ const io = require('socket.io')(server,{
     }
 });
 
-const roomData = new Map();
-
-// roomData.set("a",["jfakf","faf"]);
-// roomData.set("b",[...roomData.get("b"),"new"]);
-// console.log(roomData.has("b"));
-// console.log(roomData);
-
-app.get('/', (req, res) => {
-    res.send("bhag bsdk");
-});
+const roomData = {};
 
 io.on('connection',(socket)=>{
+
     console.log("A user connected.");
 
     socket.on("join",(roomId,userName)=>{
-        console.log("A user joined with ID: ",roomId);
         socket.join(roomId);
-
-        if(roomData.has(roomId)){
-            roomData.set(roomId,[...roomData.get(roomId),userName]);
-        }else{
-            roomData.set(roomId,[userName]);
-        }
-        io.sockets.in(roomId).emit("sync",roomData.get(roomId));
+        roomData[socket.id]=userName;        
+        const allUsers = [...io.sockets.adapter.rooms.get(roomId)].map(id=>roomData[id]);
+        io.sockets.in(roomId).emit("newjoin",userName,allUsers);
     });
+    
+    socket.on("disconnecting",()=>{
+        console.log("A user is disconnecting");
 
-    socket.on("sendEditorData",(data,roomId)=>{
-        socket.to(roomId).emit("getEditorData",data);
-    });
-
-    socket.on("leave",(roomId,userName)=>{
-        console.log("leave request recieved");
-        socket.leave(roomId);
-        roomData.set(roomId,roomData.get(roomId).filter(c=>userName!==c));
-        socket.to(roomId).emit("sync",roomData.get(roomId));  
-    });
-
-    socket.on("disconnect",()=>{
-        console.log("User Disconnected");
-        console.log(roomData);
+        [...socket.rooms].forEach(eachRoom=>{
+            socket.to(eachRoom).emit("leave",roomData[socket.id]);
+        });
+        delete roomData[socket.id];
+        socket.leave();
     })
 });
 
