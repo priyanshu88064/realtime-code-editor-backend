@@ -1,6 +1,6 @@
 const app = require('express')();
 const server = require('http').createServer(app);
-const port = 80;
+const port = process.env.PORT || 80;
 const io = require('socket.io')(server,{
     cors:{
         origin:"*"
@@ -9,6 +9,9 @@ const io = require('socket.io')(server,{
 
 const roomData = {};
 
+app.get("/",(res,req)=>{
+    return req.send("ok88064");
+});
 io.on('connection',(socket)=>{
 
     console.log("A user connected.");
